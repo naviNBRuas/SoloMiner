@@ -19,6 +19,7 @@ RUN cargo build --release
 
 # Use a minimal base image for the final stage
 FROM debian:bookworm-slim
+RUN apt-get update && apt-get install -y libssl-dev && rm -rf /var/lib/apt/lists/*
 
 # Set the working directory
 WORKDIR /app
@@ -26,9 +27,8 @@ WORKDIR /app
 # Copy the built binary from the builder stage
 COPY --from=builder /app/target/release/solominer .
 
-# Copy the config.toml and .env file
+# Copy the config.toml
 COPY config.toml .
-COPY .env .
 
 # Expose the dashboard port
 EXPOSE 8080

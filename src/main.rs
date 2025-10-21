@@ -68,7 +68,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     match &cli.command {
         Commands::Start { mode, algorithm } => {
             println!("Starting miner in {:?} mode...", mode);
-            let wallet_address = env::var("WALLET_ADDRESS")?;
+            let wallet_address = env::var("WALLET_ADDRESS").map_err(|_| SoloMinerError::ConfigError(config::ConfigError::NotFound("WALLET_ADDRESS environment variable not set.".to_string())))?;
             let num_threads = orchestrator::get_recommended_threads(mode.clone());
             println!("Using {} mining threads.", num_threads);
 
