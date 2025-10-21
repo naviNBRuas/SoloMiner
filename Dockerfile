@@ -7,10 +7,6 @@ WORKDIR /app
 # Copy Cargo.toml and Cargo.lock to leverage Docker cache
 COPY Cargo.toml Cargo.lock ./
 
-# Build dummy dependencies to cache them
-RUN mkdir src && echo "fn main() {}" > src/main.rs
-RUN cargo build --release
-
 # Copy the source code
 COPY src ./src
 
