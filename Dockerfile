@@ -12,6 +12,7 @@ COPY src ./src
 
 # Build the release binary
 RUN cargo build --release
+RUN ls -la /app/target/release/
 
 # Use a minimal base image for the final stage
 FROM debian:bookworm-slim
