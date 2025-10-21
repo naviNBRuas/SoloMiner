@@ -2,7 +2,7 @@ use actix_web::{App, HttpResponse, HttpServer, Responder, get, web};
 use std::sync::Arc;
 use tokio::sync::Mutex;
 
-#[derive(Default, Debug, Clone)]
+#[derive(Default, Debug, Clone, serde::Serialize)]
 pub struct MinerMetrics {
     pub status: String,
     pub hashrate: f64,

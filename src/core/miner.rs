@@ -1,7 +1,8 @@
 use super::{Block, MinerAlgorithm};
 use std::sync::Arc;
-use std::time::{Instant, SystemTime, UNIX_EPOCH};
+use std::time::{SystemTime, UNIX_EPOCH};
 use tokio::sync::Mutex;
+use tokio::time::Duration;
 
 pub type MinerResult<T> = Result<T, crate::SoloMinerError>;
 
@@ -27,6 +28,10 @@ impl MinerAlgorithm for Sha256Miner {
     fn name(&self) -> &'static str {
         "SHA-256"
     }
+
+    fn clone(&self) -> Box<dyn MinerAlgorithm> {
+        Box::new(Sha256Miner)
+    }
 }
 
 pub struct RandomXMiner;
@@ -51,6 +56,10 @@ impl MinerAlgorithm for RandomXMiner {
 
     fn name(&self) -> &'static str {
         "RandomX"
+    }
+
+    fn clone(&self) -> Box<dyn MinerAlgorithm> {
+        Box::new(RandomXMiner)
     }
 }
 
@@ -87,7 +96,12 @@ pub async fn start_mining(
         nonce: 0,
     };
 
-    // Mining logic here
+    // Simulate mining for a duration or indefinitely
+    let duration = Duration::from_secs(timeout_secs.unwrap_or(10)); // Default to 10 seconds
+    tokio::time::sleep(duration).await;
+
+    // In a real scenario, this would be the actual mining loop
+    // For now, we just simulate it running for a bit
 
     Ok(())
 }
