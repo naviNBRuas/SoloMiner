@@ -43,11 +43,25 @@ async fn test_dashboard_starts_and_responds() {
     // Give the dashboard some time to start
     sleep(Duration::from_secs(5)).await;
 
-    // Make an HTTP request to the dashboard
-    let client = reqwest::Client::new();
-    let res = client.get("http://127.00.1:8080/").send().await.expect("Failed to send request to dashboard");
+    // Implement a retry mechanism for connecting to the dashboard
+    let mut attempts = 0;
+    let max_attempts = 10;
+    let mut connected = false;
 
-    assert!(res.status().is_success(), "Dashboard did not return a success status");
+    while attempts < max_attempts {
+        sleep(Duration::from_secs(1)).await;
+        match client.get("http://127.00.1:8080/").send().await {
+            Ok(res) if res.status().is_success() => {
+                connected = true;
+                break;
+            }
+            _ => {
+                attempts += 1;
+            }
+        }
+    }
+
+    assert!(connected, "Dashboard did not become available after multiple attempts");
 
     // Kill the dashboard process
     child.kill().await.expect("Failed to kill dashboard process");
