@@ -63,14 +63,7 @@ impl MinerAlgorithm for RandomXMiner {
     }
 }
 
-fn hash_to_binary_representation(hash: &[u8]) -> String {
-    let mut binary_string = String::new();
-    for byte in hash {
-        binary_string.push_str(&format!("{:08b}", byte));
-    }
-    binary_string
-}
-
+#[allow(unused_variables)]
 pub async fn start_mining(
     wallet_address: &str,
     num_threads: usize,
@@ -104,4 +97,13 @@ pub async fn start_mining(
     // For now, we just simulate it running for a bit
 
     Ok(())
+}
+
+#[allow(dead_code)]
+fn hash_to_binary_representation(hash: &[u8]) -> String {
+    let mut binary_string = String::new();
+    for byte in hash {
+        binary_string.push_str(&format!("{:08b}", byte));
+    }
+    binary_string
 }
