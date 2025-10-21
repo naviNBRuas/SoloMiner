@@ -1,5 +1,6 @@
 use tokio::process::Command;
 use tokio::time::{sleep, Duration};
+use reqwest;
 
 #[tokio::test]
 async fn test_sha256_miner_starts_and_stops() {

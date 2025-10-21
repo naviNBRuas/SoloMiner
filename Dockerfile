@@ -22,7 +22,7 @@ RUN apt-get update && apt-get install -y libssl-dev && rm -rf /var/lib/apt/lists
 WORKDIR /app
 
 # Copy the built binary from the builder stage
-COPY --from=builder /app/target/release/SoloMiner .
+COPY --from=builder /app/target/release/solominer .
 
 # Copy the config.toml
 COPY config.toml .
