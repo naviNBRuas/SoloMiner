@@ -19,12 +19,14 @@ pub struct MinerConfig {
 
 #[derive(Debug, Deserialize)]
 pub struct LoggingConfig {
+    #[allow(dead_code)]
     pub level: String,
 }
 
 #[derive(Debug, Deserialize)]
 pub struct Config {
     pub miner: MinerConfig,
+    #[allow(dead_code)]
     pub logging: LoggingConfig,
 }
 

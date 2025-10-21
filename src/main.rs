@@ -11,6 +11,7 @@ mod orchestrator;
 mod telemetry;
 
 #[derive(Error, Debug)]
+#[allow(clippy::enum_variant_names)]
 enum SoloMinerError {
     #[error("Environment variable not set: {0}")]
     EnvVarError(#[from] std::env::VarError),
