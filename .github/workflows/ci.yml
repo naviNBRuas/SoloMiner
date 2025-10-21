@@ -24,6 +24,10 @@ jobs:
       run: sudo apt update && sudo apt install -y pkg-config libssl-dev
     - name: Run tests
       run: cargo test --verbose
+    - name: Run clippy
+      run: cargo clippy -- -D warnings
+    - name: Run rustfmt
+      run: cargo fmt --check
 
   build:
     name: Build for ${{ matrix.target }}
