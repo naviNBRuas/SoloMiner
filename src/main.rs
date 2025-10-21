@@ -77,7 +77,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 AlgorithmType::RandomX => Box::new(core::miner::RandomXMiner),
             };
 
-            core::miner::start_mining(&wallet_address, num_threads, selected_algorithm, metrics.clone(), &config.miner.difficulty).await?;
+            core::miner::start_mining(&wallet_address, num_threads, selected_algorithm, metrics.clone(), &config.miner.difficulty, None).await?;
         }
         Commands::Stop => {
             println!("Stopping miner...");

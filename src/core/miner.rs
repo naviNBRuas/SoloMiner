@@ -13,92 +13,62 @@ fn hash_to_binary_representation(hash: &[u8]) -> String {
     res
 }
 
+#[derive(Clone, Copy)]
 pub struct Sha256Miner;
 
-#[async_trait::async_trait]
 impl MinerAlgorithm for Sha256Miner {
-    async fn mine(&self, block: &mut Block, difficulty: &str, metrics: Arc<Mutex<crate::telemetry::MinerMetrics>>) -> MinerResult<String> {
-        let mut total_hashes_in_session = 0u64;
-        let start_time = Instant::now();
+    fn mine(&self, block: &Block, difficulty: &str) -> MinerResult<String> {
+        let block_string = format!("{}{}{}{}{}", block.id, block.timestamp, block.data, block.previous_hash, block.nonce);
+        let hash = sha256::digest(block_string.as_bytes());
+        let binary_hash = hash_to_binary_representation(hash.as_bytes());
 
-        loop {
-            let block_string = format!("{}{}{}{}{}", block.id, block.timestamp, block.data, block.previous_hash, block.nonce);
-            let hash = sha256::digest(block_string.as_bytes());
-            let binary_hash = hash_to_binary_representation(hash.as_bytes());
-
-            total_hashes_in_session += 1;
-
-            if total_hashes_in_session % 100000 == 0 {
-                let elapsed = start_time.elapsed().as_secs_f64();
-                if elapsed > 0.0 {
-                    let hashrate = total_hashes_in_session as f64 / elapsed;
-                    let mut m = metrics.lock().await;
-                    m.hashrate = hashrate;
-                    m.total_hashes = total_hashes_in_session;
-                }
-            }
-
-            if binary_hash.starts_with(difficulty) {
-                let mut m = metrics.lock().await;
-                m.blocks_found += 1;
-                return Ok(hash);
-            }
-            block.nonce += 1;
+        if binary_hash.starts_with(difficulty) {
+            return Ok(hash);
         }
+        Err(crate::SoloMinerError::MiningError("No block found".to_string()))
     }
 
     fn name(&self) -> &'static str {
         "SHA-256"
     }
+
+    fn clone(&self) -> Box<dyn MinerAlgorithm> {
+        Box::new(Sha256Miner)
+    }
 }
 
+#[derive(Clone, Copy)]
 pub struct RandomXMiner;
 
-#[async_trait::async_trait]
 impl MinerAlgorithm for RandomXMiner {
-    async fn mine(&self, block: &mut Block, difficulty: &str, metrics: Arc<Mutex<crate::telemetry::MinerMetrics>>) -> MinerResult<String> {
-        let mut total_hashes_in_session = 0u64;
-        let start_time = Instant::now();
+    fn mine(&self, block: &Block, difficulty: &str) -> MinerResult<String> {
+        // Simulate a different hashing process for RandomX
+        let block_string = format!("RandomX data + {}{}{}{}{}", block.id, block.timestamp, block.data, block.previous_hash, block.nonce);
+        let hash = sha256::digest(block_string.as_bytes()); // Using sha256 for simulation
+        let binary_hash = hash_to_binary_representation(hash.as_bytes());
 
-        loop {
-            // Simulate a different hashing process for RandomX
-            let block_string = format!("RandomX data + {}{}{}{}{}", block.id, block.timestamp, block.data, block.previous_hash, block.nonce);
-            let hash = sha256::digest(block_string.as_bytes()); // Using sha256 for simulation
-            let binary_hash = hash_to_binary_representation(hash.as_bytes());
-
-            total_hashes_in_session += 1;
-
-            if total_hashes_in_session % 100000 == 0 {
-                let elapsed = start_time.elapsed().as_secs_f64();
-                if elapsed > 0.0 {
-                    let hashrate = total_hashes_in_session as f64 / elapsed;
-                    let mut m = metrics.lock().await;
-                    m.hashrate = hashrate;
-                    m.total_hashes = total_hashes_in_session;
-                }
-            }
-
-            if binary_hash.starts_with(difficulty) {
-                let mut m = metrics.lock().await;
-                m.blocks_found += 1;
-                return Ok(hash);
-            }
-            block.nonce += 1;
+        if binary_hash.starts_with(difficulty) {
+            return Ok(hash);
         }
+        Err(crate::SoloMinerError::MiningError("No block found".to_string()))
     }
 
     fn name(&self) -> &'static str {
         "RandomX"
     }
+
+    fn clone(&self) -> Box<dyn MinerAlgorithm> {
+        Box::new(RandomXMiner)
+    }
 }
 
-pub async fn start_mining(wallet_address: &str, num_threads: usize, algorithm: Box<dyn MinerAlgorithm>, metrics: Arc<Mutex<crate::telemetry::MinerMetrics>>, difficulty: &str) -> MinerResult<()> {
+pub async fn start_mining(wallet_address: &str, num_threads: usize, algorithm: Box<dyn MinerAlgorithm>, metrics: Arc<Mutex<crate::telemetry::MinerMetrics>>, difficulty: &str, timeout_secs: Option<u64>) -> MinerResult<()> {
     println!("Mining for wallet: {}", wallet_address);
     println!("Algorithm: {}", algorithm.name());
     println!("Difficulty: {}", difficulty);
     println!("Number of threads: {}", num_threads);
 
-    let mut block = Block {
+    let block = Block {
         id: 0,
         timestamp: SystemTime::now().duration_since(UNIX_EPOCH).map_err(|e| crate::SoloMinerError::MiningError(format!("Time error: {}", e)))?.as_secs(),
         data: "First block data".to_string(),
@@ -112,24 +82,68 @@ pub async fn start_mining(wallet_address: &str, num_threads: usize, algorithm: B
         m.status = format!("Mining {} with {} threads", algorithm.name(), num_threads);
     }
 
-    let mining_task_metrics = metrics.clone(); // Clone metrics for the mining task
-    let difficulty_owned = difficulty.to_owned(); // Clone difficulty for the mining task
-    let mining_task: tokio::task::JoinHandle<MinerResult<()>> = tokio::spawn(async move {
-        let found_hash = algorithm.mine(&mut block, &difficulty_owned, mining_task_metrics).await?;
+    let (tx, mut rx) = tokio::sync::mpsc::channel(1);
+    let mut handles = vec![];
+    let total_hashes_in_session = Arc::new(Mutex::new(0u64));
+    let start_time = Arc::new(Instant::now());
 
-        println!("Found a block!");
-        println!("Block ID: {}", block.id);
-        println!("Timestamp: {}", block.timestamp);
-        println!("Data: {}", block.data);
-        println!("Previous Hash: {}", block.previous_hash);
-        println!("Nonce: {}", block.nonce);
-        println!("Hash: {}", found_hash);
-        println!("Binary Hash: {}", hash_to_binary_representation(found_hash.as_bytes()));
-        Ok(())
-    });
+    for i in 0..num_threads {
+        let mut thread_block = block.clone();
+        let algorithm = algorithm.clone();
+        let difficulty = difficulty.to_owned();
+        let tx = tx.clone();
+        let metrics = metrics.clone();
+        let total_hashes_in_session = total_hashes_in_session.clone();
+        let start_time = start_time.clone();
 
-    // Keep the main task alive while mining is happening
-    mining_task.await.map_err(|e| crate::SoloMinerError::MiningError(format!("Mining task failed: {}", e)))??;
+        let handle = tokio::spawn(async move {
+            let mut nonce = i as u64;
+            loop {
+                thread_block.nonce = nonce;
+                if let Ok(hash) = algorithm.mine(&thread_block, &difficulty) {
+                    let _ = tx.send(hash).await;
+                    break;
+                }
+                nonce += num_threads as u64;
+
+                let mut total_hashes = total_hashes_in_session.lock().await;
+                *total_hashes += 1;
+
+                if *total_hashes % 100000 == 0 {
+                    let elapsed = start_time.elapsed().as_secs_f64();
+                    if elapsed > 0.0 {
+                        let hashrate = *total_hashes as f64 / elapsed;
+                        let mut m = metrics.lock().await;
+                        m.hashrate = hashrate;
+                        m.total_hashes = *total_hashes;
+                    }
+                }
+            }
+        });
+        handles.push(handle);
+    }
+
+    let mining_future = async {
+        if let Some(found_hash) = rx.recv().await {
+            println!("Found a block!");
+            println!("Hash: {}", found_hash);
+
+            let mut m = metrics.lock().await;
+            m.blocks_found += 1;
+        }
+        Ok::<(), crate::SoloMinerError>(())
+    };
+
+    if let Some(timeout) = timeout_secs {
+        tokio::select! {
+            _ = mining_future => {},
+            _ = tokio::time::sleep(tokio::time::Duration::from_secs(timeout)) => {
+                println!("Mining timed out after {} seconds.", timeout);
+            }
+        }
+    } else {
+        mining_future.await?;
+    }
 
     // Update status to idle after mining is done
     {
@@ -137,4 +151,23 @@ pub async fn start_mining(wallet_address: &str, num_threads: usize, algorithm: B
         m.status = "Idle".to_string();
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::telemetry::MinerMetrics;
+    use std::sync::Arc;
+    use tokio::sync::Mutex;
+
+    #[tokio::test]
+    async fn test_miner_finds_block() {
+        let metrics = Arc::new(Mutex::new(MinerMetrics::default()));
+        let algorithm = Box::new(Sha256Miner);
+        let difficulty = "000";
+
+        let result = start_mining("test_wallet", 4, algorithm, metrics, difficulty, Some(5)).await;
+
+        assert!(result.is_ok());
+    }
 }

@@ -41,7 +41,7 @@ async fn test_dashboard_starts_and_responds() {
     let mut child = cmd.spawn().expect("Failed to spawn dashboard process");
 
     // Give the dashboard some time to start
-    sleep(Duration::from_secs(3)).await;
+    sleep(Duration::from_secs(5)).await;
 
     // Make an HTTP request to the dashboard
     let client = reqwest::Client::new();
