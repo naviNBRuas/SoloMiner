@@ -44,6 +44,7 @@ async fn test_dashboard_starts_and_responds() {
     sleep(Duration::from_secs(5)).await;
 
     // Implement a retry mechanism for connecting to the dashboard
+    let client = reqwest::Client::new();
     let mut attempts = 0;
     let max_attempts = 10;
     let mut connected = false;
