@@ -1,0 +1,63 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+    - name: Install Rust
+      uses: dtolnay/rust-toolchain@stable
+      with:
+        toolchain: stable
+    - name: Install dependencies
+      run: sudo apt update && sudo apt install -y pkg-config libssl-dev
+    - name: Run tests
+      run: cargo test --verbose
+
+  build:
+    name: Build for ${{ matrix.target }}
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        target: 
+          - x86_64-unknown-linux-gnu
+          - x86_64-pc-windows-gnu
+          - aarch64-unknown-linux-gnu
+          # - x86_64-apple-darwin # Requires macOS runner
+
+    steps:
+    - uses: actions/checkout@v4
+    - name: Install Rust
+      uses: dtolnay/rust-toolchain@stable
+      with:
+        toolchain: stable
+        target: ${{ matrix.target }}
+
+    - name: Install cross-compilation dependencies
+      if: matrix.target == 'aarch64-unknown-linux-gnu'
+      run: sudo apt update && sudo apt install -y gcc-aarch64-linux-gnu
+
+    - name: Build
+      run: cargo build --release --target ${{ matrix.target }}
+
+  docker:
+    name: Docker Build and Test
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+    - name: Build Docker image
+      run: docker build -t solominer .
+    - name: Test Docker image
+      run: docker run solominer --help

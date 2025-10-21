@@ -1,0 +1,7 @@
+# SoloMiner Configuration File
+
+[miner]
+difficulty = "0000"
+
+[logging]
+level = "info"
