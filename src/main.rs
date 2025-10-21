@@ -2,8 +2,8 @@ use clap::{Parser, ValueEnum};
 use dotenv::dotenv;
 use std::env;
 use std::sync::Arc;
-use tokio::sync::Mutex;
 use thiserror::Error;
+use tokio::sync::Mutex;
 
 mod config;
 mod core;
@@ -44,7 +44,7 @@ enum AlgorithmType {
 #[derive(clap::Subcommand)]
 enum Commands {
     /// Starts the miner
-    Start { 
+    Start {
         #[arg(long, default_value = "conservative")]
         mode: orchestrator::MiningMode,
         #[arg(long, default_value = "sha256")]
@@ -69,7 +69,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     match &cli.command {
         Commands::Start { mode, algorithm } => {
             println!("Starting miner in {:?} mode...", mode);
-            let wallet_address = env::var("WALLET_ADDRESS").map_err(|_| SoloMinerError::ConfigError(config::ConfigError::NotFound("WALLET_ADDRESS environment variable not set.".to_string())))?;
+            let wallet_address = env::var("WALLET_ADDRESS").map_err(|_| {
+                SoloMinerError::ConfigError(config::ConfigError::NotFound(
+                    "WALLET_ADDRESS environment variable not set.".to_string(),
+                ))
+            })?;
             let num_threads = orchestrator::get_recommended_threads(mode.clone());
             println!("Using {} mining threads.", num_threads);
 
@@ -78,7 +82,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 AlgorithmType::RandomX => Box::new(core::miner::RandomXMiner),
             };
 
-            core::miner::start_mining(&wallet_address, num_threads, selected_algorithm, metrics.clone(), &config.miner.difficulty, None).await?;
+            core::miner::start_mining(
+                &wallet_address,
+                num_threads,
+                selected_algorithm,
+                metrics.clone(),
+                &config.miner.difficulty,
+                None,
+            )
+            .await?;
         }
         Commands::Stop => {
             println!("Stopping miner...");
