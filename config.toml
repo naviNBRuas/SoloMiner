@@ -1,0 +1,15 @@
+# Lonely Solo Miner Configuration File
+
+[miner]
+difficulty = "0000"     # Mining difficulty target
+threads = 0            # Number of mining threads (0 = auto-detect)
+algorithm = "sha256"   # Mining algorithm (sha256 or randomx)
+batch_size = 10000     # Hashes per batch
+
+[logging]
+level = "info"         # Log level (trace, debug, info, warn, error)
+format = "compact"     # Log format (compact, full, json)
+
+[telemetry]
+port = 8080            # Web dashboard port
+enable_metrics = true   # Enable metrics collection

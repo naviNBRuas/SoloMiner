@@ -1,0 +1,47 @@
+[package]
+name = "solo_miner"
+version = "1.0.0"
+edition = "2024"
+
+[lib]
+name = "solo_miner"
+path = "src/lib.rs"
+
+[dependencies]
+tokio = { version = "1", features = ["full", "tracing"] }
+clap = { version = "4", features = ["derive"] }
+dotenv = "0.15"
+actix-web = "4"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+sha2 = "0.10"
+num_cpus = "1.13"
+async-trait = "0.1.80"
+thiserror = "1.0"
+toml = "0.8"
+hex = "0.4"
+ratatui = "0.26"
+crossterm = { version = "0.27", features = ["events"] }
+sysinfo = "0.30"
+chrono = "0.4"
+rand = "0.8"
+color-eyre = "0.6"
+log = "0.4"
+env_logger = "0.11"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+crossbeam-utils = "0.8"
+
+[dev-dependencies]
+tokio = { version = "1", features = ["full"] }
+reqwest = { version = "0.12", features = ["json"] }
+criterion = { version = "0.5", features = ["async_tokio"] }
+futures = "0.3"
+
+[[bench]]
+name = "miner_benches"
+harness = false
+
+[[test]]
+name = "integration_test"
+path = "tests/integration_test.rs"
